@@ -2,6 +2,7 @@
 
 
 #include "Marcus.h"
+#include "Enemy.h"
 
 AMarcus::AMarcus()
 {
@@ -12,6 +13,9 @@ AMarcus::AMarcus()
 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
+
+	AttackCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackCollisionBox"));
+	AttackCollisionBox->SetupAttachment(RootComponent);
 }
 
 void AMarcus::BeginPlay()
@@ -26,6 +30,11 @@ void AMarcus::BeginPlay()
 			Subsystem->AddMappingContext(InputMappingContext, 0);
 		}
 	}
+
+	OnAttackOverrideEndDelegate.BindUObject(this, &AMarcus::OnAttackOverrideAnimEnd);
+
+	AttackCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &AMarcus::AttackCollisionBoxBeginOverlap);
+	EnableAttackCollisionBox(false);
 }
 
 void AMarcus::Tick(float DeltaTime)
@@ -86,16 +95,61 @@ void AMarcus::JumpStarted(const FInputActionValue& Value)
 {
 	if (IsAlive && CanMove)
 	{
+		
 		Jump(); // built in jump function, so we can use it directly
 	}
 }
 void AMarcus::JumpEnded(const FInputActionValue& Value)
 {
+	
 	StopJumping(); // built in stop jumping function, so we can use it directly
 }
+
 void AMarcus::Attack(const FInputActionValue& Value)
 {
 
+	if (IsAlive && CanAttack)
+	{
+		CanAttack = false;
+		CanMove = false;
+
+		EnableAttackCollisionBox(true);
+
+		GetAnimInstance()->PlayAnimationOverride(AttackAnimSequence, FName("DefaultSlot"), 1.0f,
+			0.0f, OnAttackOverrideEndDelegate);
+	}
 }
+
+void AMarcus::OnAttackOverrideAnimEnd(bool Completed)
+{
+	CanAttack = true;
+	CanMove = true;
+	EnableAttackCollisionBox(false);
+}
+
+void AMarcus::AttackCollisionBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	AEnemy* Enemy = Cast<AEnemy>(OtherActor);
+
+	if(Enemy)
+	{
+		Enemy->TakeDamage(AttackDamage, AttackStunDuration);
+	}
+}
+
+void AMarcus::EnableAttackCollisionBox(bool Enabled)
+{
+	if (Enabled)
+	{
+		AttackCollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		AttackCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
+	}
+	else
+	{
+		AttackCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		AttackCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
+	}
+}
+
 
 
