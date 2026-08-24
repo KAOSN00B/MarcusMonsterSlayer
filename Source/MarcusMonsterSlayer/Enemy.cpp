@@ -9,6 +9,10 @@ AEnemy::AEnemy()
 	PlayerDetectorSphere = CreateDefaultSubobject<USphereComponent>(TEXT("PlayerDetectorSphere"));
 	PlayerDetectorSphere->SetupAttachment(RootComponent);
 
+	AttackCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackCollisionBox"));
+	AttackCollisionBox->SetupAttachment(RootComponent);
+
+
 	HPText = CreateDefaultSubobject<UTextRenderComponent>(TEXT("HPText"));
 	HPText->SetupAttachment(RootComponent);
 }
@@ -20,16 +24,21 @@ void AEnemy::BeginPlay()
 	PlayerDetectorSphere->OnComponentEndOverlap.AddDynamic(this, &AEnemy::DetectorOverlapEnd);
 
 	UpdateHitPoints(HitPoints);
+
+	OnAttackOverrideEndDelegate.BindUObject(this, &AEnemy::OnAttackOverrideAnimEnd);
+
+	AttackCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &AEnemy::AttackCollisionBoxBeginOverlap);
+	EnableAttackCollisionBox(false);
 }
 
 void AEnemy::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (IsAlive && FollowTarget)
+	if (IsAlive && FollowTarget && !IsStunned)
 	{
 		// get the direction to move in based on the target's location                    Ternary operator (Like an if Statement)
-		float MoveDirection = (FollowTarget->GetActorLocation().X - GetActorLocation().X) > 0.0f ? 1.0f : -1.0f; 
+		float MoveDirection = (FollowTarget->GetActorLocation().X - GetActorLocation().X) > 0.0f ? 1.0f : -1.0f;
 		UpdateDirection(MoveDirection);
 		if (ShouldMoveToTarget())
 		{
@@ -42,7 +51,10 @@ void AEnemy::Tick(float DeltaTime)
 		}
 		else
 		{
-			//AttackPlayer();
+			if (FollowTarget->IsAlive && CanAttack)
+			{
+				AttackPlayer();
+			}
 		}
 	}
 }
@@ -109,7 +121,7 @@ void AEnemy::UpdateHitPoints(int NewHitPoints)
 	HPText->SetText(FText::FromString(HitPointString));
 }
 
-void AEnemy::TakeDamage(int DamageAmount, float StunDuration)
+void AEnemy::TakeDamage(int DamageAmount, float StunDuration, float PushBackForce)
 {
 	if (!IsAlive) return;
 
@@ -122,13 +134,101 @@ void AEnemy::TakeDamage(int DamageAmount, float StunDuration)
 		HPText->SetHiddenInGame(true); //enemy is dead , hide the HP text (will change to hp bar soon)
 		IsAlive = false;
 		CanMove = false;
+		CanAttack = false;
 
-		//Play Death Animation override eventually
+		GetAnimInstance()->JumpToNode(FName("JumpDie"), FName("OgreStateMachine"));
+		EnableAttackCollisionBox(false);
 	}
 	else
 	{
-		//Enemy is still alive take hit animation override eventually
+		GetAnimInstance()->JumpToNode(FName("JumpTakeHit"), FName("OgreStateMachine"));
+		ApplyPushBack(PushBackForce);
+		Stun(StunDuration);
+	}
+}
+
+void AEnemy::ApplyPushBack(float PushBackForce)
+{
+	if (IsAlive && !IsStunned)
+	{
+		FVector PushBackDirection = (GetActorLocation() - FollowTarget->GetActorLocation()).GetSafeNormal();
+
+		LaunchCharacter(PushBackDirection * PushBackForce, true, true);
+	}
+}
+
+void AEnemy::Stun(float StunDurationInSeconds)
+{
+	IsStunned = true;
+
+	bool IsTimerAlreadyActive = GetWorldTimerManager().IsTimerActive(StunTimer); //if the timer is already active, clear it so we can reset it with the new stun duration
+
+	if (IsTimerAlreadyActive)
+	{
+		GetWorldTimerManager().ClearTimer(StunTimer);
+	}
+
+	GetWorldTimerManager().SetTimer(StunTimer, this, &AEnemy::OnStunTimerTimeout, 1.0f, false, StunDurationInSeconds);
+	GetAnimInstance()->StopAllAnimationOverrides(); //need to do this to stop the current animation override (hit) so we can play the stun animation override
+}
+
+void AEnemy::OnStunTimerTimeout()
+{
+	IsStunned = false;
+
+}
+
+void AEnemy::AttackPlayer()
+{
+	if (CanAttack && IsAlive && !IsStunned)
+	{
+		CanAttack = false;
+		CanMove = false;
+
+		//EnableAttackCollisionBox(true);
+		GetAnimInstance()->PlayAnimationOverride(AttackAnimSequence, FName("DefaultSlot"), 1.0f,
+			0.0f, OnAttackOverrideEndDelegate);
+		GetWorldTimerManager().SetTimer(AttackCoolDownTimer, this,
+			&AEnemy::OnAttackCooldownTimerTimeout, 1.0f, false, AttackCooldownInSeconds);
 
 	}
 }
 
+void AEnemy::OnAttackOverrideAnimEnd(bool Completed)
+{
+	CanMove = true;
+}
+
+void AEnemy::OnAttackCooldownTimerTimeout()
+{
+	if (IsAlive)
+	{
+		CanAttack = true;
+	}
+}
+
+void AEnemy::AttackCollisionBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	AMarcus* Player = Cast<AMarcus>(OtherActor);
+
+	if (Player)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::White, TEXT("Player Hit"));
+	}
+
+}
+
+void AEnemy::EnableAttackCollisionBox(bool Enabled)
+{
+	if (Enabled)
+	{
+		AttackCollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		AttackCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
+	}
+	else
+	{
+		AttackCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		AttackCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
+	}
+}

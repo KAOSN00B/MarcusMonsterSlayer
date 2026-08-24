@@ -133,7 +133,8 @@ void AMarcus::AttackCollisionBoxBeginOverlap(UPrimitiveComponent* OverlappedComp
 
 	if(Enemy)
 	{
-		Enemy->TakeDamage(AttackDamage, AttackStunDuration);
+		
+		Enemy->TakeDamage(AttackDamage, AttackStunDuration, SwordPushBackForce);
 	}
 }
 

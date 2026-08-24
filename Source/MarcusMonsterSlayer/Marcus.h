@@ -53,9 +53,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	const UPaperZDAnimSequence* AttackAnimSequence;
 
-
 	FZDOnAnimationOverrideEndSignature OnAttackOverrideEndDelegate;
-	
 
 	// if alive it can also move and attack, if dead it can't do anything
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -67,12 +65,14 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool CanAttack = true;
 
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int AttackDamage = 2;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float AttackStunDuration = 0.3f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float SwordPushBackForce = 500.0f;
 
 	AMarcus();
 	virtual void BeginPlay() override;
@@ -87,7 +87,6 @@ public:
 
 	void UpdateDirection(float MoveDirection);
 	
-
 	void OnAttackOverrideAnimEnd(bool Completed);
 
 	UFUNCTION()
