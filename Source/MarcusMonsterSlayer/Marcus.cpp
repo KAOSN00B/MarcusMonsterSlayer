@@ -2,6 +2,7 @@
 
 
 #include "Marcus.h"
+#include "Kismet/GameplayStatics.h"
 #include "Enemy.h"
 
 AMarcus::AMarcus()
@@ -16,11 +17,16 @@ AMarcus::AMarcus()
 
 	AttackCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackCollisionBox"));
 	AttackCollisionBox->SetupAttachment(RootComponent);
+
+
+
 }
 
 void AMarcus::BeginPlay()
 {
 	Super::BeginPlay();
+
+	HitPoints = MaxHitPoints;
 
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
@@ -35,6 +41,27 @@ void AMarcus::BeginPlay()
 
 	AttackCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &AMarcus::AttackCollisionBoxBeginOverlap);
 	EnableAttackCollisionBox(false);
+
+	MyGameInstance = Cast<UMarcusMonsterHunterGameInstance>(GetGameInstance());
+
+	if (MyGameInstance)
+	{
+		HitPoints = MyGameInstance->PlayerHP;
+		MaxHitPoints = MyGameInstance->PlayerMaxHP;
+	}
+
+	//creating hud at start
+	if (PlayerHUDClass)
+	{
+		PlayerHUDWidget = CreateWidget<UPlayerHUD>(UGameplayStatics::GetPlayerController(GetWorld(), 0), PlayerHUDClass);
+		if (PlayerHUDWidget)
+		{
+			PlayerHUDWidget->AddToPlayerScreen();
+			PlayerHUDWidget->SetHP(HitPoints, MaxHitPoints);
+			PlayerHUDWidget->SetCurrency(50); //currency and level are default vaules for test. will implement getters soon.
+			PlayerHUDWidget->SetLevel(1);
+		}
+	}
 }
 
 void AMarcus::Tick(float DeltaTime)
@@ -62,7 +89,7 @@ void AMarcus::Move(const FInputActionValue& Value)
 	//positive 1 is right, negative 1 is left (D and A keys)
 	float MoveActionValue = Value.Get<float>();
 
-	if (IsAlive && CanMove)
+	if (IsAlive && CanMove && !IsStunned)
 	{
 		FVector Direction = FVector(1.0f, 0.0f, 0.0f); // move in the X direction (right) not up or down Z or Y
 		AddMovementInput(Direction, MoveActionValue); // built in function to add movement input, so we can use it directly
@@ -108,7 +135,7 @@ void AMarcus::JumpEnded(const FInputActionValue& Value)
 void AMarcus::Attack(const FInputActionValue& Value)
 {
 
-	if (IsAlive && CanAttack)
+	if (IsAlive && CanAttack && !IsStunned)
 	{
 		CanAttack = false;
 		CanMove = false;
@@ -118,6 +145,62 @@ void AMarcus::Attack(const FInputActionValue& Value)
 		GetAnimInstance()->PlayAnimationOverride(AttackAnimSequence, FName("DefaultSlot"), 1.0f,
 			0.0f, OnAttackOverrideEndDelegate);
 	}
+}
+
+void AMarcus::TakeDamage(int DamageAmount, float StunDuration)
+{
+	if (!IsAlive) return;
+
+	UpdateHitPoints(HitPoints - DamageAmount, MaxHitPoints);
+
+	if (HitPoints <= 0)
+	{
+		//Marcus is Dead		
+		// place holder may make health bar instead. HPText->SetHiddenInGame(true); 
+		UpdateHitPoints(0, 0);
+		IsAlive = false;
+		CanMove = false;
+		CanAttack = false;
+
+		GetAnimInstance()->JumpToNode(FName("JumpDie"), FName("MarcusStateMachine"));
+		EnableAttackCollisionBox(false);
+
+	}
+	else
+	{
+		GetAnimInstance()->JumpToNode(FName("JumpTakeHit"), FName("MarcusStateMachine"));
+		Stun(StunDuration);
+	}
+}
+
+void AMarcus::UpdateHitPoints(int NewHitPoints, int NewMaxHitPoints)
+{
+	HitPoints = NewHitPoints;
+	MaxHitPoints = NewMaxHitPoints;
+
+	MyGameInstance->SetPlayerHP(HitPoints, MaxHitPoints);
+
+	PlayerHUDWidget->SetHP(HitPoints, MaxHitPoints);
+}
+
+void AMarcus::Stun(float StunDurationInSeconds)
+{
+	IsStunned = true;
+
+	bool IsTimerAlreadyActive = GetWorldTimerManager().IsTimerActive(StunTimer); //if the timer is already active, clear it so we can reset it with the new stun duration
+
+	if (IsTimerAlreadyActive)
+	{
+		GetWorldTimerManager().ClearTimer(StunTimer);
+	}
+
+	GetWorldTimerManager().SetTimer(StunTimer, this, &AMarcus::OnStunTimerTimeout, 1.0f, false, StunDurationInSeconds);
+	GetAnimInstance()->StopAllAnimationOverrides(); //need to do this to stop the current animation override (hit) so we can play the stun animation override
+}
+
+void AMarcus::OnStunTimerTimeout()
+{
+	IsStunned = false;
 }
 
 void AMarcus::OnAttackOverrideAnimEnd(bool Completed)
@@ -132,8 +215,7 @@ void AMarcus::AttackCollisionBoxBeginOverlap(UPrimitiveComponent* OverlappedComp
 	AEnemy* Enemy = Cast<AEnemy>(OtherActor);
 
 	if(Enemy)
-	{
-		
+	{		
 		Enemy->TakeDamage(AttackDamage, AttackStunDuration, SwordPushBackForce);
 	}
 }
@@ -149,6 +231,32 @@ void AMarcus::EnableAttackCollisionBox(bool Enabled)
 	{
 		AttackCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		AttackCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
+	}
+}
+
+void AMarcus::CollectItem(CollectableType ItemType)
+{
+	UGameplayStatics::PlaySound2D(GetWorld(), CollectItemSound); //placeholder will change to each sound have its own sound
+
+	switch (ItemType)
+	{
+	case CollectableType::HealthPotion:
+		{
+			
+		}break;
+	case CollectableType::Money:
+		{
+			
+		}break;
+	case CollectableType::DoubleJumpUpgrade:
+		{
+			
+		}break;
+	default:
+		{
+			
+		}break;
+
 	}
 }
 

@@ -7,6 +7,11 @@
 
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Engine/TimerHandle.h"
+#include "PlayerHUD.h"
+#include "MarcusMonsterHunterGameInstance.h"
+
+#include "Sound/Soundbase.h"
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -15,8 +20,8 @@
 #include "GameFramework/Controller.h"
 #include "PaperZDAnimInstance.h"
 #include "Components/BoxComponent.h"
+#include "CollectableItem.h"
 #include "Marcus.generated.h"
-
 
 
 /**
@@ -55,6 +60,18 @@ public:
 
 	FZDOnAnimationOverrideEndSignature OnAttackOverrideEndDelegate;
 
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UPlayerHUD> PlayerHUDClass;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	UPlayerHUD* PlayerHUDWidget;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	UMarcusMonsterHunterGameInstance* MyGameInstance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	USoundBase* CollectItemSound;
+
 	// if alive it can also move and attack, if dead it can't do anything
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool IsAlive = true;
@@ -65,14 +82,25 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool CanAttack = true;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool IsStunned = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int AttackDamage = 2;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int  HitPoints;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	int MaxHitPoints = 2;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float AttackStunDuration = 0.3f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float SwordPushBackForce = 500.0f;
+
+	FTimerHandle StunTimer;
 
 	AMarcus();
 	virtual void BeginPlay() override;
@@ -83,7 +111,13 @@ public:
 	void Move(const FInputActionValue& Value);
 	void JumpStarted(const FInputActionValue& Value);
 	void JumpEnded(const FInputActionValue& Value);
+
 	void Attack(const FInputActionValue& Value);
+	void TakeDamage(int DamageAmount, float StunDuration);
+	void Stun(float DurationInSeconds);
+	void OnStunTimerTimeout();
+	void UpdateHitPoints(int NewHitPoints, int NewMaxHitPoints);
+	
 
 	void UpdateDirection(float MoveDirection);
 	
@@ -95,4 +129,6 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void EnableAttackCollisionBox(bool Enabled);
+
+	void CollectItem(CollectableType ItemType);
 };

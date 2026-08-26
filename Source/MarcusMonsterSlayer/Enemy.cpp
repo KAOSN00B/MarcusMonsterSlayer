@@ -3,6 +3,7 @@
 
 #include "Enemy.h"
 
+
 AEnemy::AEnemy()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -12,20 +13,29 @@ AEnemy::AEnemy()
 	AttackCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackCollisionBox"));
 	AttackCollisionBox->SetupAttachment(RootComponent);
 
-
 	HPText = CreateDefaultSubobject<UTextRenderComponent>(TEXT("HPText"));
 	HPText->SetupAttachment(RootComponent);
+
+	HealthBarWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("EnemyHealthBar"));
+	HealthBarWidget->SetupAttachment(RootComponent);
 }
 
 void AEnemy::BeginPlay()
 {
 	Super::BeginPlay();
+
+	HitPoints = MaxHitPoints;
+
+	HealthBarWidget->SetVisibility(false);
+	HPText->SetVisibility(false);
+
 	PlayerDetectorSphere->OnComponentBeginOverlap.AddDynamic(this, &AEnemy::DetectorOverlapBegin);
 	PlayerDetectorSphere->OnComponentEndOverlap.AddDynamic(this, &AEnemy::DetectorOverlapEnd);
 
 	UpdateHitPoints(HitPoints);
 
 	OnAttackOverrideEndDelegate.BindUObject(this, &AEnemy::OnAttackOverrideAnimEnd);
+	OnDeathOverrideEndDelegate.BindUObject(this, &AEnemy::OnDeathOverrideAnimEnd);
 
 	AttackCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &AEnemy::AttackCollisionBoxBeginOverlap);
 	EnableAttackCollisionBox(false);
@@ -64,14 +74,14 @@ void AEnemy::UpdateDirection(float MoveDirection)
 	FRotator CurrentRotation = GetActorRotation(); // get the current rotation of the controller
 	if (MoveDirection < 0.0f) // if move direction is not 0 we are moving left (-1)
 	{
-			// set the rotation to 180 degrees on the Z axis (yaw) to face left)
-			SetActorRotation(FRotator(CurrentRotation.Pitch, 0.0f, CurrentRotation.Roll));
+		// set the rotation to 180 degrees on the Z axis (yaw) to face left)
+			SetActorRotation(FRotator(CurrentRotation.Pitch, 180.0f, CurrentRotation.Roll));
 
 	}
 	else if (MoveDirection > 0.0f)
 	{
-			// set the rotation to 0 degrees on the Z axis (yaw) to face right)
-			SetActorRotation(FRotator(CurrentRotation.Pitch, 180.0f, CurrentRotation.Roll));
+		// set the rotation to 0 degrees on the Z axis (yaw) to face right)
+			SetActorRotation(FRotator(CurrentRotation.Pitch, 0.0f, CurrentRotation.Roll));
 
 	}
 }
@@ -117,8 +127,15 @@ void AEnemy::UpdateHitPoints(int NewHitPoints)
 {
 	HitPoints = NewHitPoints;
 
-	FString HitPointString = FString::Printf(TEXT("HP: %d"), HitPoints);
+	FString HitPointString = FString::Printf(TEXT("HP: %d/%d"), HitPoints, MaxHitPoints);
 	HPText->SetText(FText::FromString(HitPointString));
+
+	UEnemyHealthBar* EnemyHealthBar = Cast<UEnemyHealthBar>(HealthBarWidget->GetUserWidgetObject());
+
+	if (EnemyHealthBar)
+	{
+		EnemyHealthBar->SetHealth(HitPoints, MaxHitPoints);
+	}
 }
 
 void AEnemy::TakeDamage(int DamageAmount, float StunDuration, float PushBackForce)
@@ -127,29 +144,39 @@ void AEnemy::TakeDamage(int DamageAmount, float StunDuration, float PushBackForc
 
 	UpdateHitPoints(HitPoints - DamageAmount);
 
-	if(HitPoints <= 0)
-	{
-		//Enemy is Dead
-		UpdateHitPoints(0);
-		HPText->SetHiddenInGame(true); //enemy is dead , hide the HP text (will change to hp bar soon)
-		IsAlive = false;
-		CanMove = false;
-		CanAttack = false;
+	HealthBarWidget->SetVisibility(true);
+	HPText->SetVisibility(true);
 
-		GetAnimInstance()->JumpToNode(FName("JumpDie"), FName("OgreStateMachine"));
-		EnableAttackCollisionBox(false);
-	}
-	else
-	{
-		GetAnimInstance()->JumpToNode(FName("JumpTakeHit"), FName("OgreStateMachine"));
-		ApplyPushBack(PushBackForce);
-		Stun(StunDuration);
-	}
+		if (HitPoints <= 0)
+		{
+			//Enemy is Dead
+			UpdateHitPoints(0);
+			HPText->SetHiddenInGame(true); //enemy is dead , hide the HP text (will change to hp bar soon)
+			IsAlive = false;
+			CanMove = false;
+			CanAttack = false;
+
+
+			HealthBarWidget->SetVisibility(false);
+			HPText->SetVisibility(false);
+
+			GetAnimInstance()->JumpToNode(FName("JumpDie"), FName("OgreStateMachine"));
+			EnableAttackCollisionBox(false);
+
+			GetAnimInstance()->PlayAnimationOverride(DeathAnimSequence, FName("DefaultSlot"),
+				1.0f, 0.0f, OnDeathOverrideEndDelegate);
+		}
+		else
+		{
+			GetAnimInstance()->JumpToNode(FName("JumpTakeHit"), FName("OgreStateMachine"));
+			ApplyPushBack(PushBackForce);
+			Stun(StunDuration);
+		}
 }
 
 void AEnemy::ApplyPushBack(float PushBackForce)
 {
-	if (IsAlive && !IsStunned)
+	if (IsAlive && !IsStunned && FollowTarget)
 	{
 		FVector PushBackDirection = (GetActorLocation() - FollowTarget->GetActorLocation()).GetSafeNormal();
 
@@ -185,7 +212,6 @@ void AEnemy::AttackPlayer()
 		CanAttack = false;
 		CanMove = false;
 
-		//EnableAttackCollisionBox(true);
 		GetAnimInstance()->PlayAnimationOverride(AttackAnimSequence, FName("DefaultSlot"), 1.0f,
 			0.0f, OnAttackOverrideEndDelegate);
 		GetWorldTimerManager().SetTimer(AttackCoolDownTimer, this,
@@ -196,7 +222,10 @@ void AEnemy::AttackPlayer()
 
 void AEnemy::OnAttackOverrideAnimEnd(bool Completed)
 {
-	CanMove = true;
+	if(IsAlive)
+	{
+		CanMove = true;
+	}
 }
 
 void AEnemy::OnAttackCooldownTimerTimeout()
@@ -214,7 +243,7 @@ void AEnemy::AttackCollisionBoxBeginOverlap(UPrimitiveComponent* OverlappedCompo
 
 	if (Player)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::White, TEXT("Player Hit"));
+		Player->TakeDamage(AttackPower, AttackStunDuration);
 	}
 
 }
@@ -231,4 +260,9 @@ void AEnemy::EnableAttackCollisionBox(bool Enabled)
 		AttackCollisionBox->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		AttackCollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
 	}
+}
+
+void AEnemy::OnDeathOverrideAnimEnd(bool Completed)
+{
+	Destroy();
 }

@@ -8,6 +8,8 @@
 #include "Components/SphereComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/WidgetComponent.h"
+#include "EnemyHealthBar.h"
 #include "PaperZDAnimInstance.h"
 
 #include "Engine/TimerHandle.h"
@@ -35,17 +37,34 @@ public:
 	UBoxComponent* AttackCollisionBox;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	UWidgetComponent* HealthBarWidget;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	AMarcus* FollowTarget;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	UPaperZDAnimSequence* AttackAnimSequence;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPaperZDAnimSequence* DeathAnimSequence;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float StoppingDistance = 70.f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float AttackCooldownInSeconds = 2.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int HitPoints = 3;
+	int HitPoints;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int MaxHitPoints = 3;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int AttackPower = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AttackStunDuration = 0.4f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	bool IsAlive = true;
@@ -63,6 +82,7 @@ public:
 	FTimerHandle AttackCoolDownTimer;
 
 	FZDOnAnimationOverrideEndSignature OnAttackOverrideEndDelegate;
+	FZDOnAnimationOverrideEndSignature OnDeathOverrideEndDelegate;
 
 	AEnemy();
 	virtual void BeginPlay() override;
@@ -98,4 +118,6 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void EnableAttackCollisionBox(bool Enabled);
+
+	void OnDeathOverrideAnimEnd(bool Completed);
 };
