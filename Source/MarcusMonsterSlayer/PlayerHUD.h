@@ -31,7 +31,7 @@ public:
 	UTextBlock* LevelText;
 
 	void SetHP(int CurrentHP, int MaxHP);
-	void SetCurrency(int Amount);
+	void SetMoney(int Amount);
 	void SetLevel(int Index);
 
 };

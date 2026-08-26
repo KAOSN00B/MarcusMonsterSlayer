@@ -33,6 +33,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	CollectableType Type;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int AmountOnCollect = 0; //adjustable depending on item.
+
+
 	ACollectableItem();
 
 	UFUNCTION()

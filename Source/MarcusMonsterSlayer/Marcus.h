@@ -6,6 +6,8 @@
 #include "PaperZDCharacter.h"
 
 #include "Camera/CameraComponent.h"
+#include "Camera/PlayerCameraManager.h"
+
 #include "GameFramework/SpringArmComponent.h"
 #include "Engine/TimerHandle.h"
 #include "PlayerHUD.h"
@@ -56,7 +58,13 @@ public:
 	UInputAction* AttackAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UInputAction* QuitAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	const UPaperZDAnimSequence* AttackAnimSequence;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPaperZDAnimSequence* DeathAnimSequence;
 
 	FZDOnAnimationOverrideEndSignature OnAttackOverrideEndDelegate;
 
@@ -77,6 +85,9 @@ public:
 	bool IsAlive = true;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool IsActive = true;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool CanMove = true;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -88,10 +99,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int AttackDamage = 2;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	int  HitPoints;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int MaxHitPoints = 2;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -101,6 +112,7 @@ public:
 	float SwordPushBackForce = 500.0f;
 
 	FTimerHandle StunTimer;
+	FTimerHandle GameOverTimer;
 
 	AMarcus();
 	virtual void BeginPlay() override;
@@ -130,5 +142,15 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void EnableAttackCollisionBox(bool Enabled);
 
-	void CollectItem(CollectableType ItemType);
+	void CollectItem(CollectableType ItemType, int Amount);
+
+	void UnlockDoubleJump();
+
+	void OnGameOverTimerTimeout();
+	void DeactivatePlayer();
+	
+	void PauseGame();
+
+	void UnPauseGame();
+
 };

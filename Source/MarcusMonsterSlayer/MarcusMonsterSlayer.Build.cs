@@ -8,7 +8,8 @@ public class MarcusMonsterSlayer : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "Paper2D", "PaperZD" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", 
+			"Paper2D", "PaperZD", "GameplayCameras" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 

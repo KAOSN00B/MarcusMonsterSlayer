@@ -4,6 +4,7 @@
 #include "Marcus.h"
 #include "Kismet/GameplayStatics.h"
 #include "Enemy.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 AMarcus::AMarcus()
 {
@@ -11,14 +12,16 @@ AMarcus::AMarcus()
 
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(RootComponent);
+	SpringArm->bUsePawnControlRotation = false;
+	SpringArm->bInheritYaw = false;
+	SpringArm->bInheritPitch = false;
+	SpringArm->bInheritRoll = false;
 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 
 	AttackCollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("AttackCollisionBox"));
 	AttackCollisionBox->SetupAttachment(RootComponent);
-
-
 
 }
 
@@ -39,6 +42,7 @@ void AMarcus::BeginPlay()
 
 	OnAttackOverrideEndDelegate.BindUObject(this, &AMarcus::OnAttackOverrideAnimEnd);
 
+
 	AttackCollisionBox->OnComponentBeginOverlap.AddDynamic(this, &AMarcus::AttackCollisionBoxBeginOverlap);
 	EnableAttackCollisionBox(false);
 
@@ -46,8 +50,22 @@ void AMarcus::BeginPlay()
 
 	if (MyGameInstance)
 	{
-		HitPoints = MyGameInstance->PlayerHP;
-		MaxHitPoints = MyGameInstance->PlayerMaxHP;
+		if (MyGameInstance->HasInitializedHP)
+		{
+			HitPoints = MyGameInstance->PlayerHP;
+			MaxHitPoints = MyGameInstance->PlayerMaxHP;
+		}
+		else
+		{
+			MyGameInstance->SetPlayerHP(HitPoints, MaxHitPoints);
+			MyGameInstance->HasInitializedHP = true;
+		}
+
+		if (MyGameInstance->IsDoubleJumpUnlocked)
+		{
+			MyGameInstance->IsDoubleJumpUnlocked = true;
+			UnlockDoubleJump();
+		}
 	}
 
 	//creating hud at start
@@ -58,8 +76,8 @@ void AMarcus::BeginPlay()
 		{
 			PlayerHUDWidget->AddToPlayerScreen();
 			PlayerHUDWidget->SetHP(HitPoints, MaxHitPoints);
-			PlayerHUDWidget->SetCurrency(50); //currency and level are default vaules for test. will implement getters soon.
-			PlayerHUDWidget->SetLevel(1);
+			PlayerHUDWidget->SetMoney(MyGameInstance->CollectedMoneyCount); //currency and level are default vaules for test. will implement getters soon.
+			PlayerHUDWidget->SetLevel(MyGameInstance->CurrentLevelIndex);
 		}
 	}
 }
@@ -81,6 +99,8 @@ void AMarcus::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &AMarcus::JumpEnded);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Canceled, this, &AMarcus::JumpEnded);
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Started, this, &AMarcus::Attack);
+		EnhancedInputComponent->BindAction(QuitAction, ETriggerEvent::Started, this, &AMarcus::PauseGame);
+		//EnhancedInputComponent->BindAction(QuitAction, ETriggerEvent::Completed, this, &AMarcus::UnPauseGame);
 	}
 }
 
@@ -105,7 +125,7 @@ void AMarcus::UpdateDirection(float MoveDirection)
 		if (CurrentRotation.Yaw != 180.0f) // yaw is the Z axis
 		{
 			// set the rotation to 180 degrees on the Z axis (yaw) to face left)
-			Controller->SetControlRotation(FRotator(CurrentRotation.Pitch, 180.0f, CurrentRotation.Roll)); 
+			Controller->SetControlRotation(FRotator(CurrentRotation.Pitch, 180.0f, CurrentRotation.Roll));
 		}
 	}
 	else if (MoveDirection > 0.0f)
@@ -122,13 +142,14 @@ void AMarcus::JumpStarted(const FInputActionValue& Value)
 {
 	if (IsAlive && CanMove)
 	{
-		
+
 		Jump(); // built in jump function, so we can use it directly
 	}
 }
+
 void AMarcus::JumpEnded(const FInputActionValue& Value)
 {
-	
+
 	StopJumping(); // built in stop jumping function, so we can use it directly
 }
 
@@ -150,6 +171,7 @@ void AMarcus::Attack(const FInputActionValue& Value)
 void AMarcus::TakeDamage(int DamageAmount, float StunDuration)
 {
 	if (!IsAlive) return;
+	if (!IsActive)return;
 
 	UpdateHitPoints(HitPoints - DamageAmount, MaxHitPoints);
 
@@ -157,13 +179,18 @@ void AMarcus::TakeDamage(int DamageAmount, float StunDuration)
 	{
 		//Marcus is Dead		
 		// place holder may make health bar instead. HPText->SetHiddenInGame(true); 
-		UpdateHitPoints(0, 0);
+		UpdateHitPoints(0, MaxHitPoints);
 		IsAlive = false;
 		CanMove = false;
 		CanAttack = false;
 
+		float RestartDelay = 3.0f;
+
+		GetWorldTimerManager().SetTimer(GameOverTimer, this, &AMarcus::OnGameOverTimerTimeout, 1.0f, false, RestartDelay);
+
 		GetAnimInstance()->JumpToNode(FName("JumpDie"), FName("MarcusStateMachine"));
 		EnableAttackCollisionBox(false);
+
 
 	}
 	else
@@ -177,6 +204,11 @@ void AMarcus::UpdateHitPoints(int NewHitPoints, int NewMaxHitPoints)
 {
 	HitPoints = NewHitPoints;
 	MaxHitPoints = NewMaxHitPoints;
+
+	if (HitPoints > MaxHitPoints)
+	{
+		HitPoints = MaxHitPoints;
+	}
 
 	MyGameInstance->SetPlayerHP(HitPoints, MaxHitPoints);
 
@@ -205,17 +237,20 @@ void AMarcus::OnStunTimerTimeout()
 
 void AMarcus::OnAttackOverrideAnimEnd(bool Completed)
 {
-	CanAttack = true;
-	CanMove = true;
-	EnableAttackCollisionBox(false);
+	if(IsActive && IsAlive)
+	{
+		CanAttack = true;
+		CanMove = true;
+		EnableAttackCollisionBox(false);
+	}
 }
 
 void AMarcus::AttackCollisionBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	AEnemy* Enemy = Cast<AEnemy>(OtherActor);
 
-	if(Enemy)
-	{		
+	if (Enemy)
+	{
 		Enemy->TakeDamage(AttackDamage, AttackStunDuration, SwordPushBackForce);
 	}
 }
@@ -234,31 +269,78 @@ void AMarcus::EnableAttackCollisionBox(bool Enabled)
 	}
 }
 
-void AMarcus::CollectItem(CollectableType ItemType)
+void AMarcus::CollectItem(CollectableType ItemType, int Amount)
 {
 	UGameplayStatics::PlaySound2D(GetWorld(), CollectItemSound); //placeholder will change to each sound have its own sound
 
 	switch (ItemType)
 	{
 	case CollectableType::HealthPotion:
-		{
-			
-		}break;
+	{
+		UpdateHitPoints(HitPoints + Amount, MaxHitPoints);
+	}break;
+
 	case CollectableType::Money:
+	{
+		if (MyGameInstance)
 		{
+			MyGameInstance->AddMoney(Amount);
 			
-		}break;
+		}
+		if (PlayerHUDWidget)
+		{
+			PlayerHUDWidget->SetMoney(MyGameInstance->CollectedMoneyCount);
+		}
+	}break;
 	case CollectableType::DoubleJumpUpgrade:
+	{
+		if (!MyGameInstance->IsDoubleJumpUnlocked)
 		{
-			
-		}break;
+			MyGameInstance->IsDoubleJumpUnlocked = true;
+			UnlockDoubleJump();
+		}
+	}break;
 	default:
-		{
-			
-		}break;
+	{
+
+	}break;
 
 	}
 }
 
+void AMarcus::UnlockDoubleJump()
+{
+	JumpMaxCount = 2;
+}
+
+void AMarcus::OnGameOverTimerTimeout()
+{
+	MyGameInstance->RestartGame();
+}
+
+void AMarcus::DeactivatePlayer()
+{
+	if (IsActive)
+	{
+		IsActive = false;
+		CanAttack = false;
+		CanMove = false;
+
+		GetCharacterMovement()->StopMovementImmediately(); //all momentum gone from player
+	}
+}
+
+void AMarcus::PauseGame()
+{
+	// Pause
+	bool IsGamePaused = UGameplayStatics::IsGamePaused(GetWorld());
+	UGameplayStatics::SetGamePaused(GetWorld(), !IsGamePaused);
+}
+
+void AMarcus::UnPauseGame()
+{
+
+	UGameplayStatics::SetGamePaused(GetWorld(), false);
+}
 
 

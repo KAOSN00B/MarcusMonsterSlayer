@@ -40,7 +40,7 @@ void ACollectableItem::OverlapBegin(UPrimitiveComponent* OverlappedComponent, AA
 
 	if (Player && Player->IsAlive)
 	{
-		Player->CollectItem(Type);
+		Player->CollectItem(Type, AmountOnCollect);
 		Destroy();
 	}
 }

@@ -12,7 +12,7 @@ void UPlayerHUD::SetHP(int CurrentHP, int MaxHP)
 	HPBar->SetPercent(Percent);
 }
 
-void UPlayerHUD::SetCurrency(int Amount)
+void UPlayerHUD::SetMoney(int Amount)
 {
 	FString Str = FString::Printf(TEXT("Gold:%d"), Amount);
 	CurrencyText->SetText(FText::FromString(Str));

@@ -15,8 +15,27 @@ class MARCUSMONSTERSLAYER_API UMarcusMonsterHunterGameInstance : public UGameIns
 	GENERATED_BODY()
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
-	int PlayerHP;
-	int PlayerMaxHP;
+	int PlayerHP = 2;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	int PlayerMaxHP = 2;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	int CollectedMoneyCount = 0;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	int CurrentLevelIndex = 1;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	bool IsDoubleJumpUnlocked = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	bool HasInitializedHP = false;
 
 	void SetPlayerHP(int NewCurrentHP, int MaxHP);
+	void AddMoney(int Amount);
+
+	void ChangeLevel(int LevelIndex);
+	void TriggerGameOverScreen();
+	void RestartGame();
 };
