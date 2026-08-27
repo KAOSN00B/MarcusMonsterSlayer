@@ -18,6 +18,7 @@ class MARCUSMONSTERSLAYER_API UPlayerHUD : public UUserWidget
 {
 	GENERATED_BODY()
 public:
+
 	UPROPERTY(EditAnywhere, meta = (BindWidget))
 	UProgressBar* HPBar;
 

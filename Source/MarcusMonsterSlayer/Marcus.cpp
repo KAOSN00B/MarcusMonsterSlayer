@@ -5,6 +5,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Enemy.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/PlayerController.h"
 
 AMarcus::AMarcus()
 {
@@ -332,15 +333,55 @@ void AMarcus::DeactivatePlayer()
 
 void AMarcus::PauseGame()
 {
-	// Pause
-	bool IsGamePaused = UGameplayStatics::IsGamePaused(GetWorld());
-	UGameplayStatics::SetGamePaused(GetWorld(), !IsGamePaused);
+	bool bWasPaused = UGameplayStatics::IsGamePaused(GetWorld());
+	if (bWasPaused)
+	{
+		UnPauseGame();
+		return;
+	}
+
+	UGameplayStatics::SetGamePaused(GetWorld(), true);
+
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+
+	if (PauseMenuClass && PlayerController)
+	{
+		if (!PauseMenuWidget)
+		{
+			PauseMenuWidget = CreateWidget<UPauseMenu>(PlayerController, PauseMenuClass);
+		}
+
+		if (PauseMenuWidget)
+		{
+			PauseMenuWidget->AddToViewport();
+		}
+
+		FInputModeGameAndUI InputMode;
+		InputMode.SetWidgetToFocus(PauseMenuWidget->TakeWidget());
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		InputMode.SetHideCursorDuringCapture(false);
+		PlayerController->SetInputMode(InputMode);
+		PlayerController->SetShowMouseCursor(true);
+	}
 }
 
 void AMarcus::UnPauseGame()
 {
-
 	UGameplayStatics::SetGamePaused(GetWorld(), false);
+
+	if (PauseMenuWidget)
+	{
+		PauseMenuWidget->RemoveFromParent();
+	}
+
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	if (PlayerController)
+	{
+		PlayerController->SetInputMode(FInputModeGameOnly());
+		PlayerController->SetShowMouseCursor(false);
+	}
 }
+
+
 
 

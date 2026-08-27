@@ -11,6 +11,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Engine/TimerHandle.h"
 #include "PlayerHUD.h"
+#include "PauseMenu.h"
 #include "MarcusMonsterHunterGameInstance.h"
 
 #include "Sound/Soundbase.h"
@@ -73,6 +74,12 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	UPlayerHUD* PlayerHUDWidget;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UPauseMenu> PauseMenuClass;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	UPauseMenu* PauseMenuWidget;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	UMarcusMonsterHunterGameInstance* MyGameInstance;
@@ -149,8 +156,10 @@ public:
 	void OnGameOverTimerTimeout();
 	void DeactivatePlayer();
 	
+	UFUNCTION(BlueprintCallable)
 	void PauseGame();
 
+	UFUNCTION(BlueprintCallable)
 	void UnPauseGame();
 
 };
