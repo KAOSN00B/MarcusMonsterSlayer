@@ -16,14 +16,10 @@ void UMarcusMonsterHunterGameInstance::AddMoney(int Amount)
 	CollectedMoneyCount += Amount;
 }
 
-void UMarcusMonsterHunterGameInstance::ChangeLevel(int LevelIndex)
+void UMarcusMonsterHunterGameInstance::ChangeLevel(TSoftObjectPtr<UWorld> NewLevel)
 {
-	if (LevelIndex <= 0) return;
-
-	CurrentLevelIndex = LevelIndex;
-	FString LevelNameString = FString::Printf(TEXT("Level_%d"), LevelIndex);
-	UGameplayStatics::OpenLevel(GetWorld(), FName(LevelNameString));
-
+	NextLevel = NewLevel;
+	UGameplayStatics::OpenLevelBySoftObjectPtr(this, NextLevel);
 }
 
 void UMarcusMonsterHunterGameInstance::TriggerGameOverScreen()
@@ -36,7 +32,5 @@ void UMarcusMonsterHunterGameInstance::RestartGame()
 	CollectedMoneyCount = 0;
 	IsDoubleJumpUnlocked = false;
 
-
-	CurrentLevelIndex = 1;
-	ChangeLevel(CurrentLevelIndex);
+	ChangeLevel(StartingLevel);
 }

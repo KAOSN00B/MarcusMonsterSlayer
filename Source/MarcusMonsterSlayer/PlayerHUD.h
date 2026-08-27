@@ -33,6 +33,6 @@ public:
 
 	void SetHP(int CurrentHP, int MaxHP);
 	void SetMoney(int Amount);
-	void SetLevel(int Index);
+	void SetLevel(const FString& LevelName);
 
 };

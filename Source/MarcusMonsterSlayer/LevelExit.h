@@ -29,8 +29,8 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	bool IsActive = true;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int LevelIndex = 1;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Levels")
+	TSoftObjectPtr<UWorld> NextLevel;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float WaitTimeInSeconds = 2.0f;

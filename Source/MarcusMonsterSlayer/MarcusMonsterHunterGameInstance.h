@@ -24,7 +24,10 @@ public:
 	int CollectedMoneyCount = 0;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
-	int CurrentLevelIndex = 1;
+	TSoftObjectPtr<UWorld> NextLevel;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSoftObjectPtr<UWorld> StartingLevel;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	bool IsDoubleJumpUnlocked = false;
@@ -35,7 +38,7 @@ public:
 	void SetPlayerHP(int NewCurrentHP, int MaxHP);
 	void AddMoney(int Amount);
 
-	void ChangeLevel(int LevelIndex);
+	void ChangeLevel(TSoftObjectPtr<UWorld> NewLevel);
 	void TriggerGameOverScreen();
 	void RestartGame();
 };

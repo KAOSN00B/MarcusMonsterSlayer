@@ -68,7 +68,7 @@ void ALevelExit::OnWaitTimerTimeout()
 
 	if (MyGameInstance)
 	{
-		MyGameInstance->ChangeLevel(LevelIndex);
+		MyGameInstance->ChangeLevel(NextLevel);
 	}
 
 }

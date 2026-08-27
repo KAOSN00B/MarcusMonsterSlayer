@@ -78,7 +78,7 @@ void AMarcus::BeginPlay()
 			PlayerHUDWidget->AddToPlayerScreen();
 			PlayerHUDWidget->SetHP(HitPoints, MaxHitPoints);
 			PlayerHUDWidget->SetMoney(MyGameInstance->CollectedMoneyCount); //currency and level are default vaules for test. will implement getters soon.
-			PlayerHUDWidget->SetLevel(MyGameInstance->CurrentLevelIndex);
+			PlayerHUDWidget->SetLevel(UGameplayStatics::GetCurrentLevelName(GetWorld(), true));
 		}
 	}
 }
@@ -178,20 +178,8 @@ void AMarcus::TakeDamage(int DamageAmount, float StunDuration)
 
 	if (HitPoints <= 0)
 	{
-		//Marcus is Dead		
-		// place holder may make health bar instead. HPText->SetHiddenInGame(true); 
 		UpdateHitPoints(0, MaxHitPoints);
-		IsAlive = false;
-		CanMove = false;
-		CanAttack = false;
-
-		float RestartDelay = 3.0f;
-
-		GetWorldTimerManager().SetTimer(GameOverTimer, this, &AMarcus::OnGameOverTimerTimeout, 1.0f, false, RestartDelay);
-
-		GetAnimInstance()->JumpToNode(FName("JumpDie"), FName("MarcusStateMachine"));
-		EnableAttackCollisionBox(false);
-
+		PlayerDeath();
 
 	}
 	else
@@ -199,6 +187,24 @@ void AMarcus::TakeDamage(int DamageAmount, float StunDuration)
 		GetAnimInstance()->JumpToNode(FName("JumpTakeHit"), FName("MarcusStateMachine"));
 		Stun(StunDuration);
 	}
+}
+
+void AMarcus::PlayerDeath()
+{
+	//Marcus is Dead		
+	// place holder may make health bar instead. HPText->SetHiddenInGame(true); 
+	GetWorld();
+	
+	IsAlive = false;
+	CanMove = false;
+	CanAttack = false;
+
+	float RestartDelay = 3.0f;
+
+	GetWorldTimerManager().SetTimer(GameOverTimer, this, &AMarcus::OnGameOverTimerTimeout, 1.0f, false, RestartDelay);
+	GetAnimInstance()->JumpToNode(FName("JumpDie"), FName("MarcusStateMachine"));
+	EnableAttackCollisionBox(false);
+
 }
 
 void AMarcus::UpdateHitPoints(int NewHitPoints, int NewMaxHitPoints)
@@ -328,6 +334,7 @@ void AMarcus::DeactivatePlayer()
 		CanMove = false;
 
 		GetCharacterMovement()->StopMovementImmediately(); //all momentum gone from player
+		GetCharacterMovement()->DisableMovement();
 	}
 }
 

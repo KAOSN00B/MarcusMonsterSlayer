@@ -18,8 +18,8 @@ void UPlayerHUD::SetMoney(int Amount)
 	CurrencyText->SetText(FText::FromString(Str));
 }
 
-void UPlayerHUD::SetLevel(int Index)
+void UPlayerHUD::SetLevel(const FString& LevelName)
 {
-	FString Str = FString::Printf(TEXT("Level:%d"), Index);
+	FString Str = FString::Printf(TEXT("Level:%s"), *LevelName);
 	LevelText->SetText(FText::FromString(Str));
 }

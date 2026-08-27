@@ -133,6 +133,7 @@ public:
 
 	void Attack(const FInputActionValue& Value);
 	void TakeDamage(int DamageAmount, float StunDuration);
+	void PlayerDeath();
 	void Stun(float DurationInSeconds);
 	void OnStunTimerTimeout();
 	void UpdateHitPoints(int NewHitPoints, int NewMaxHitPoints);
@@ -161,5 +162,6 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void UnPauseGame();
+
 
 };
