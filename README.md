@@ -1,4 +1,6 @@
-<img width="1486" height="851" alt="Screenshot 2026-09-02 120534" src="https://github.com/user-attachments/assets/8129174c-eaa1-4d53-bd04-d96c13580373" /># Marcus Monster Slayer
+# Marcus Monster Slayer
+
+
 <img width="1267" height="690" alt="Screenshot 2026-09-02 120701" src="https://github.com/user-attachments/assets/b15dcd95-cfa4-47f5-8cff-4a4c052c8cc3" />
 
 A 2D gothic action-platformer built with **Unreal Engine 5.8** (Paper2D + PaperZD).
