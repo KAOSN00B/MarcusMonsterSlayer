@@ -160,7 +160,7 @@ void AEnemy::TakeDamage(int DamageAmount, float StunDuration, float PushBackForc
 			HealthBarWidget->SetVisibility(false);
 			HPText->SetVisibility(false);
 
-			GetAnimInstance()->JumpToNode(FName("JumpDie"), FName("OgreStateMachine"));
+			GetAnimInstance()->JumpToNode(FName("JumpDie"), StateMachineName);
 			EnableAttackCollisionBox(false);
 
 			GetAnimInstance()->PlayAnimationOverride(DeathAnimSequence, FName("DefaultSlot"),
@@ -168,7 +168,7 @@ void AEnemy::TakeDamage(int DamageAmount, float StunDuration, float PushBackForc
 		}
 		else
 		{
-			GetAnimInstance()->JumpToNode(FName("JumpTakeHit"), FName("OgreStateMachine"));
+			GetAnimInstance()->JumpToNode(FName("JumpTakeHit"), StateMachineName);
 			ApplyPushBack(PushBackForce);
 			Stun(StunDuration);
 		}

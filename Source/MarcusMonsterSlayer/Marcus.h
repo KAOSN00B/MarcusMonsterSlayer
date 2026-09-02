@@ -118,8 +118,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float SwordPushBackForce = 500.0f;
 
+	float GroundedCheckAccumulator = 0.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	FVector PlayerLastGroundedLocation = FVector::ZeroVector;
+
 	FTimerHandle StunTimer;
 	FTimerHandle GameOverTimer;
+
+
 
 	AMarcus();
 	virtual void BeginPlay() override;
@@ -155,6 +162,8 @@ public:
 	void UnlockDoubleJump();
 
 	void OnGameOverTimerTimeout();
+
+	UFUNCTION(BlueprintCallable)
 	void DeactivatePlayer();
 	
 	UFUNCTION(BlueprintCallable)

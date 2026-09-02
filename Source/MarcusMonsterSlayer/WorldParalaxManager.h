@@ -6,30 +6,42 @@
 #include "GameFramework/Actor.h"
 #include "WorldParalaxManager.generated.h"
 
+class APaperSpriteActor;
+class UMaterialInstanceDynamic;
+class UCameraComponent;
+
 USTRUCT(BlueprintType)
 struct FParallaxLayer
 {
 	GENERATED_BODY()
 
-	// A background actor already placed in the level (e.g. a PaperSpriteActor)
+	// A Paper Sprite Actor already placed in the level. At BeginPlay it gets attached to the
+	// player and snapped to Offset below, so it always stays in view.
+	// Give its sprite a material based on M_ParalaxSprite (exposing "CameraPosX" and
+	// "Paralax Multiplyer" scalar parameters).
 	UPROPERTY(EditAnywhere, Category = "Parallax")
-	AActor* LayerActor = nullptr;
+	APaperSpriteActor* LayerActor = nullptr;
 
-	// 0 = locked to the camera (infinitely far).  1 = locked to the world (foreground).
+	// Position relative to the camera once attached. X = left/right, Y = up/down.
+	// Push Y up for a sky layer, or down/back on X-Y for something further away.
+	UPROPERTY(EditAnywhere, Category = "Parallax")
+	FVector2D Offset = FVector2D::ZeroVector;
+
+	// 0 = doesn't scroll at all (attached solidly to the camera). 1 = scrolls at full camera speed.
 	UPROPERTY(EditAnywhere, Category = "Parallax", meta = (ClampMin = "0.0", ClampMax = "1.0"))
-	float ParallaxFactor = 0.5f;
+	float Speed = 0.5f;
 
-	// At startup, scale this layer to cover the camera view and snap it to the camera.
-	// Use it for the far backdrop layer.
+	// Scale this layer at BeginPlay to cover the camera's view, so one sprite is enough
+	// without you having to hand-size it.
 	UPROPERTY(EditAnywhere, Category = "Parallax")
-	bool bFitToView = false;
+	bool bFitToView = true;
 
-	// 1.0 = cover the view exactly.  >1 = overhang, so a scrolling layer never shows an edge.
+	// 1.0 = cover the view exactly. >1 = overhang, so it never shows an edge.
 	UPROPERTY(EditAnywhere, Category = "Parallax", meta = (ClampMin = "1.0", EditCondition = "bFitToView"))
-	float FitMargin = 1.0f;
+	float FitMargin = 1.2f;
 
-	// Runtime scratch - where this actor started
-	FVector InitialLocation = FVector::ZeroVector;
+	UPROPERTY(Transient)
+	UMaterialInstanceDynamic* DynamicMaterial = nullptr;
 };
 
 UCLASS()
@@ -48,11 +60,5 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Parallax")
 	TArray<FParallaxLayer> ParallaxLayers;
 
-	// Camera position when we started - our reference point
-	FVector InitialCameraLocation = FVector::ZeroVector;
-
-	bool IsInitialised = false;
-
-	void InitialiseFromCurrentState();
-	void FitLayerToView(FParallaxLayer& Layer, const FVector& CameraLocation);
+	void FitLayerToView(FParallaxLayer& Layer, UCameraComponent* Camera);
 };

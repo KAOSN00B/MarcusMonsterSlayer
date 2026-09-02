@@ -18,6 +18,9 @@ void UMarcusMonsterHunterGameInstance::AddMoney(int Amount)
 
 void UMarcusMonsterHunterGameInstance::ChangeLevel(TSoftObjectPtr<UWorld> NewLevel)
 {
+	// checkpoints don't carry across level boundaries
+	HasCheckpoint = false;
+
 	NextLevel = NewLevel;
 	UGameplayStatics::OpenLevelBySoftObjectPtr(this, NextLevel);
 }
@@ -33,4 +36,24 @@ void UMarcusMonsterHunterGameInstance::RestartGame()
 	IsDoubleJumpUnlocked = false;
 
 	ChangeLevel(StartingLevel);
+}
+
+void UMarcusMonsterHunterGameInstance::SetCheckpoint(FName LevelName, FVector Location)
+{
+	HasCheckpoint = true;
+	CheckpointLevelName = LevelName;
+	CheckpointLocation = Location;
+}
+
+void UMarcusMonsterHunterGameInstance::RespawnAtCheckpoint()
+{
+	// no checkpoint reached yet - fall back to a full restart
+	if (!HasCheckpoint)
+	{
+		RestartGame();
+		return;
+	}
+
+	PlayerHP = PlayerMaxHP;                          // respawn at full health
+	UGameplayStatics::OpenLevel(this, CheckpointLevelName);   // reload the level -> enemies reset
 }

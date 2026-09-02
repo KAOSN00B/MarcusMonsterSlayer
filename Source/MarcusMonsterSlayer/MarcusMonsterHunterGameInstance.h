@@ -35,10 +35,25 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	bool HasInitializedHP = false;
 
+	// last activated checkpoint - drives respawn on death
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	bool HasCheckpoint = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	FName CheckpointLevelName;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	FVector CheckpointLocation = FVector::ZeroVector;
+
 	void SetPlayerHP(int NewCurrentHP, int MaxHP);
 	void AddMoney(int Amount);
 
 	void ChangeLevel(TSoftObjectPtr<UWorld> NewLevel);
 	void TriggerGameOverScreen();
+
+	UFUNCTION(BlueprintCallable)
 	void RestartGame();
+
+	void SetCheckpoint(FName LevelName, FVector Location);
+	void RespawnAtCheckpoint();
 };

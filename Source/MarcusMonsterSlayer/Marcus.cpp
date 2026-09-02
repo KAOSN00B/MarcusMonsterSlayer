@@ -4,7 +4,9 @@
 #include "Marcus.h"
 #include "Kismet/GameplayStatics.h"
 #include "Enemy.h"
+#include "FlyingEnemy.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/PlayerController.h"
 
 AMarcus::AMarcus()
@@ -17,6 +19,7 @@ AMarcus::AMarcus()
 	SpringArm->bInheritYaw = false;
 	SpringArm->bInheritPitch = false;
 	SpringArm->bInheritRoll = false;
+	SpringArm->TargetOffset = FVector(0.0f, 0.0f, 50.0f);
 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
@@ -31,6 +34,8 @@ void AMarcus::BeginPlay()
 	Super::BeginPlay();
 
 	HitPoints = MaxHitPoints;
+
+	PlayerLastGroundedLocation = GetActorLocation();
 
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
@@ -67,6 +72,13 @@ void AMarcus::BeginPlay()
 			MyGameInstance->IsDoubleJumpUnlocked = true;
 			UnlockDoubleJump();
 		}
+
+		// if we reloaded via a checkpoint, drop Marcus at it instead of the placed spot
+		if (MyGameInstance->HasCheckpoint)
+		{
+			SetActorLocation(MyGameInstance->CheckpointLocation, false, nullptr, ETeleportType::TeleportPhysics);
+			PlayerLastGroundedLocation = MyGameInstance->CheckpointLocation;
+		}
 	}
 
 	//creating hud at start
@@ -87,6 +99,16 @@ void AMarcus::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	GroundedCheckAccumulator += DeltaTime;
+	if (GroundedCheckAccumulator >= 0.2f)
+	{
+		GroundedCheckAccumulator = 0.0f;
+
+		if (IsAlive && !IsStunned && GetCharacterMovement()->IsMovingOnGround())
+		{
+			PlayerLastGroundedLocation = GetActorLocation();
+		}
+	}
 }
 
 void AMarcus::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -184,6 +206,8 @@ void AMarcus::TakeDamage(int DamageAmount, float StunDuration)
 	}
 	else
 	{
+		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Green, TEXT("JumpTakeHit branch"));
+		GetAnimInstance()->JumpToNode(FName("JumpTakeHit"), FName("MarcusStateMachine"));
 		GetAnimInstance()->JumpToNode(FName("JumpTakeHit"), FName("MarcusStateMachine"));
 		Stun(StunDuration);
 	}
@@ -254,11 +278,19 @@ void AMarcus::OnAttackOverrideAnimEnd(bool Completed)
 
 void AMarcus::AttackCollisionBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	AEnemy* Enemy = Cast<AEnemy>(OtherActor);
-
-	if (Enemy)
+	if (AEnemy* Enemy = Cast<AEnemy>(OtherActor))
 	{
-		Enemy->TakeDamage(AttackDamage, AttackStunDuration, SwordPushBackForce);
+		// only the body capsule is a real sword hit - ignore the detector sphere, health-bar widget, enemy attack box
+		if (OtherComp == Enemy->GetCapsuleComponent())
+		{
+			Enemy->TakeDamage(AttackDamage, AttackStunDuration, SwordPushBackForce);
+		}
+		return;
+	}
+
+	if (AFlyingEnemy* Flyer = Cast<AFlyingEnemy>(OtherActor))
+	{
+		Flyer->TakeHit(AttackDamage);
 	}
 }
 
@@ -322,7 +354,8 @@ void AMarcus::UnlockDoubleJump()
 
 void AMarcus::OnGameOverTimerTimeout()
 {
-	MyGameInstance->RestartGame();
+	// reloads the checkpoint's level (enemies reset, full HP); falls back to RestartGame if no checkpoint
+	MyGameInstance->RespawnAtCheckpoint();
 }
 
 void AMarcus::DeactivatePlayer()

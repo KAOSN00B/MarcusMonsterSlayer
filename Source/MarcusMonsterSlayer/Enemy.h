@@ -42,6 +42,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	AMarcus* FollowTarget;
 
+	// name of the state machine inside this enemy's PaperZD AnimBP (jump nodes JumpTakeHit / JumpDie live in it)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FName StateMachineName = TEXT("OgreStateMachine");
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	UPaperZDAnimSequence* AttackAnimSequence;
 
