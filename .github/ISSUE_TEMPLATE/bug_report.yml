@@ -1,0 +1,38 @@
+name: Bug report
+description: Something behaves incorrectly
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Actual vs. expected behaviour.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Load Level_1
+        2. ...
+        3. See ...
+    validations:
+      required: true
+  - type: input
+    id: build
+    attributes:
+      label: Build
+      description: Packaged version/tag, or "editor from source @ <commit>".
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [Player, Enemy AI, Flying enemy, Level transition, Checkpoint, UI/HUD, Hazard, Parallax, Packaging, Other]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Relevant lines from Saved/Logs, or a clip.

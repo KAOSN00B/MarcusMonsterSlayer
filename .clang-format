@@ -1,0 +1,24 @@
+# Approximates the Unreal Engine coding standard.
+Language: Cpp
+BasedOnStyle: LLVM
+Standard: c++20
+ColumnLimit: 0
+UseTab: Always
+TabWidth: 4
+IndentWidth: 4
+AccessModifierOffset: -4
+NamespaceIndentation: All
+BreakBeforeBraces: Allman
+AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+BinPackArguments: true
+BinPackParameters: true
+PointerAlignment: Left
+ReferenceAlignment: Left
+SpaceAfterTemplateKeyword: false
+AlwaysBreakTemplateDeclarations: Yes
+SortIncludes: false
+IndentCaseLabels: true
+FixNamespaceComments: true

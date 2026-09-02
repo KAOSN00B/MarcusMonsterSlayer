@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: clang-format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+      - name: Check formatting
+        run: |
+          files=$(find Source -type f \( -name '*.h' -o -name '*.cpp' \))
+          [ -z "$files" ] && exit 0
+          clang-format --dry-run --Werror $files
+
+  lfs:
+    name: LFS integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Verify no committed LFS pointers are broken
+        run: |
+          git lfs ls-files -l | awk '{print $3}' | while read -r f; do
+            [ -z "$f" ] && continue
+            head -c 20 "$f" | grep -q 'version https://git-lfs' && {
+              echo "Un-smudged LFS pointer: $f"; exit 1; }
+          done
+          echo "LFS OK"
+
+  hygiene:
+    name: Repo hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No editor-only engine references in tracked config
+        run: |
+          if grep -RInE '/Engine/Editor(Sounds|Materials|Resources)/' Config/ ; then
+            echo "Editor-only engine reference found in Config/ - will break cook."; exit 1
+          fi
+          echo "Hygiene OK"
+
+  # Packaging needs a licensed engine; run it on a self-hosted Windows runner
+  # that has UE 5.8 installed and $UE_ROOT set. Gated so forks without the
+  # runner don't hang.
+  package-windows:
+    name: Package (Win64 Shipping)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, windows, unreal-5-8]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: BuildCookRun
+        shell: pwsh
+        run: |
+          & "$env:UE_ROOT\Engine\Build\BatchFiles\RunUAT.bat" BuildCookRun `
+            -project="$env:GITHUB_WORKSPACE\MarcusMonsterSlayer.uproject" `
+            -noP4 -platform=Win64 -clientconfig=Shipping `
+            -cook -build -stage -pak -archive `
+            -archivedirectory="$env:GITHUB_WORKSPACE\dist"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MarcusMonsterSlayer-Win64-Shipping
+          path: dist/
+          if-no-files-found: error

@@ -73,3 +73,12 @@ Plugins/**/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+# --- Project additions ---
+.idea/
+.vscode/
+*.slnx
+*.opendb
+/dist/
+.DS_Store
+Thumbs.db
