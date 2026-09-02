@@ -1,4 +1,5 @@
-# Marcus Monster Slayer
+<img width="1486" height="851" alt="Screenshot 2026-09-02 120534" src="https://github.com/user-attachments/assets/8129174c-eaa1-4d53-bd04-d96c13580373" /># Marcus Monster Slayer
+<img width="1267" height="690" alt="Screenshot 2026-09-02 120701" src="https://github.com/user-attachments/assets/b15dcd95-cfa4-47f5-8cff-4a4c052c8cc3" />
 
 A 2D gothic action-platformer built with **Unreal Engine 5.8** (Paper2D + PaperZD).
 Play as Marcus, a monster slayer cutting through a cursed cathedral of ogres,
@@ -37,6 +38,7 @@ Play it on itch.io: <https://kaosn00b.itch.io/marcus-monster-hunter>
 | Primary module | `MarcusMonsterSlayer` (Runtime) |
 
 ## Gameplay
+<img width="1488" height="854" alt="Screenshot 2026-09-02 120519" src="https://github.com/user-attachments/assets/dd6583a5-a010-4763-8ffa-65866e1392fd" />
 
 - Run-and-slash platforming across hand-authored levels (`MainMenu -> Level_1 -> Level_2`).
 - Melee combat vs. three enemy archetypes, each with its own animation set and health bar.
@@ -63,6 +65,7 @@ Play it on itch.io: <https://kaosn00b.itch.io/marcus-monster-hunter>
 
 Bindings live in `Content/InputActions/` (`IA_Move`, `IA_Jump`, `IA_Attack`,
 `IA_Pause`, `InputMappingContext_MarcusMonsterHunter`).
+<img width="1486" height="851" alt="Screenshot 2026-09-02 120534" src="https://github.com/user-attachments/assets/f63c6ccb-7e44-449c-8024-f44139379487" />
 
 ## Getting the game
 
@@ -70,6 +73,7 @@ Download the latest Windows build from
 [Releases](../../releases) or [itch.io](https://kaosn00b.itch.io/marcus-monster-hunter),
 unzip anywhere, and run `MarcusMonsterSlayer.exe`. It launches in a 1280x720
 window; change the mode in the options menu or pass `-fullscreen`.
+<img width="1484" height="866" alt="Screenshot 2026-09-02 120528" src="https://github.com/user-attachments/assets/90fddef9-dd46-4484-b20f-388ad65a3d2e" />
 
 ## Building from source
 
