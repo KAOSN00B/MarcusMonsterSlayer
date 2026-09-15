@@ -1,5 +1,5 @@
 # Marcus Monster Slayer
-
+you can download the exe at https://kaosn00b.itch.io/marcus-monster-hunter
 
 <img width="1267" height="690" alt="Screenshot 2026-09-02 120701" src="https://github.com/user-attachments/assets/b15dcd95-cfa4-47f5-8cff-4a4c052c8cc3" />
 
